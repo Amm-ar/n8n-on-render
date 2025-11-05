@@ -1,0 +1,68 @@
+{
+  "name": "WhatsApp Auto-Responder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "whatsapp-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "const incoming = items[0].json;\n\n// Extract sender number and message text\nconst from = incoming.entry[0].changes[0].value.messages[0].from;\nconst text = incoming.entry[0].changes[0].value.messages[0].text.body;\n\n// Example logic: simple reply\nlet reply;\nif(text.toLowerCase().includes('hi')) {\n  reply = 'Hello! How can I help you today?';\n} else {\n  reply = 'Thanks for your message. We will reply soon!';\n}\n\nreturn [{json:{to: from, message: reply}}];"
+      },
+      "name": "Decide Reply",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://graph.facebook.com/v17.0/{{PHONE_NUMBER_ID}}/messages",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$json[\"to\"]}}\",\n  \"text\": {\n    \"body\": \"{{$json[\"message\"]}}\"\n  }\n}"
+      },
+      "name": "Send WhatsApp Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_HTTP_CREDENTIALS_ID"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Decide Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Reply": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
